@@ -1,4 +1,4 @@
-import { Activity, AlertCircle, FileText, Server } from "lucide-react";
+import { Activity } from "lucide-react";
 
 import StatCard from "../components/dashboard/StatCard";
 import RecentLogs from "../components/dashboard/RecentLogs";
