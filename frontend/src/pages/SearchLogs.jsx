@@ -1,16 +1,21 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Filter, Search } from "lucide-react";
 
 import SearchBar from "../components/logs/SearchBar";
 import LogFilters from "../components/logs/LogFilters";
 import LogTable from "../components/logs/LogTable";
 import { mockLogs } from "../data/mockLogs";
+import { searchLogs } from "../services/logService";
 
 function SearchLogs() {
   const [searchQuery, setSearchQuery] = useState("");
   const [level, setLevel] = useState("ALL");
   const [service, setService] = useState("ALL");
   const [host, setHost] = useState("ALL");
+
+  const [filteredLogs, setFilteredLogs] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const services = useMemo(
     () => [...new Set(mockLogs.map((log) => log.service))],
@@ -22,33 +27,29 @@ function SearchLogs() {
     []
   );
 
-  const filteredLogs = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
+  useEffect(() => {
+    const loadLogs = async () => {
+      try {
+        setLoading(true);
+        setError("");
 
-    return mockLogs.filter((log) => {
-      const matchesSearch =
-        !query ||
-        log.message.toLowerCase().includes(query) ||
-        log.service.toLowerCase().includes(query) ||
-        log.host.toLowerCase().includes(query) ||
-        log.level.toLowerCase().includes(query);
+        const data = await searchLogs({
+          search: searchQuery,
+          level,
+          service,
+          host,
+        });
 
-      const matchesLevel =
-        level === "ALL" || log.level === level;
+        setFilteredLogs(data);
+      } catch (err) {
+        console.error("Failed to load logs:", err);
+        setError("Failed to load logs.");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-      const matchesService =
-        service === "ALL" || log.service === service;
-
-      const matchesHost =
-        host === "ALL" || log.host === host;
-
-      return (
-        matchesSearch &&
-        matchesLevel &&
-        matchesService &&
-        matchesHost
-      );
-    });
+    loadLogs();
   }, [searchQuery, level, service, host]);
 
   const resetFilters = () => {
@@ -127,7 +128,17 @@ function SearchLogs() {
           </div>
         </div>
 
-        <LogTable logs={filteredLogs} />
+        {loading ? (
+          <div className="empty-logs">
+            <p>Loading logs...</p>
+          </div>
+        ) : error ? (
+          <div className="empty-logs">
+            <p>{error}</p>
+          </div>
+        ) : (
+          <LogTable logs={filteredLogs} />
+        )}
       </section>
     </div>
   );
