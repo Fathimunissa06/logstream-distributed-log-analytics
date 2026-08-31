@@ -1,23 +1,34 @@
-import { Bell, UserCircle } from "lucide-react";
+import { Bell, Moon, Sun  } from "lucide-react";
 
-function Navbar() {
+function Navbar({ darkMode, setDarkMode }) {
   return (
     <header className="navbar">
-      <div>
-        <span className="navbar-label">Distributed Log Analytics</span>
+      <div className="navbar-brand">
+        <strong>LogStream</strong>
+        <span>Distributed Log Analytics</span>
       </div>
 
       <div className="navbar-actions">
+        <button
+          className="theme-toggle"
+          type="button"
+          onClick={() => setDarkMode(!darkMode)}
+          aria-label="Toggle theme"
+          title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+        >
+          {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+        </button>
+
         <button className="icon-button" aria-label="Notifications">
           <Bell size={19} />
         </button>
 
-        <div className="user-profile">
-          <UserCircle size={22} />
+        <div className="system-status">
+          <span className="status-dot"></span>
 
           <div>
-            <span>Nikkiraj4</span>
-            <small>Frontend Developer</small>
+            <span>System</span>
+            <small>Connected</small>
           </div>
         </div>
       </div>
