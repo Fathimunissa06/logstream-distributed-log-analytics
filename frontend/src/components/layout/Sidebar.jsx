@@ -10,7 +10,11 @@ function Sidebar() {
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
-        <div className="brand-icon">LS</div>
+        <img
+          src="/logo.png"
+          alt="LogStream logo"
+          className="brand-logo"
+        />
 
         <div>
           <h2>LogStream</h2>
