@@ -1,33 +1,25 @@
-import { mockLogs } from "../data/mockLogs";
-// import { apiRequest } from "./api";
+import { apiRequest } from "./api";
 
-export async function searchLogs(filters) {
-  const query = filters.search?.trim().toLowerCase() || "";
+export async function searchLogs(filters = {}) {
+  const params = new URLSearchParams();
 
-  const filtered = mockLogs.filter((log) => {
-    const matchesSearch =
-      !query ||
-      log.message.toLowerCase().includes(query) ||
-      log.service.toLowerCase().includes(query) ||
-      log.host.toLowerCase().includes(query) ||
-      log.level.toLowerCase().includes(query);
+  const query = filters.search?.trim();
 
-    const matchesLevel =
-      filters.level === "ALL" || log.level === filters.level;
+  if (query) {
+    params.set("q", query);
+  }
 
-    const matchesService =
-      filters.service === "ALL" || log.service === filters.service;
+  if (filters.service && filters.service !== "ALL") {
+    params.set("service", filters.service);
+  }
 
-    const matchesHost =
-      filters.host === "ALL" || log.host === filters.host;
+  if (filters.level && filters.level !== "ALL") {
+    params.set("level", filters.level);
+  }
 
-    return (
-      matchesSearch &&
-      matchesLevel &&
-      matchesService &&
-      matchesHost
-    );
-  });
+  const queryString = params.toString();
 
-  return Promise.resolve(filtered);
+  return apiRequest(
+    `/api/search${queryString ? `?${queryString}` : ""}`
+  );
 }
