@@ -1559,3 +1559,254 @@
 .light-mode .alert-status {
   border-color: #e2e8f0;
 }
+/* ================================
+   Alert Configuration
+================================ */
+
+.alerts-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.alert-create-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 9px 13px;
+  border: 1px solid #2563eb;
+  border-radius: 7px;
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.alert-create-button:hover {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
+.alert-config-panel {
+  margin-bottom: 24px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.alert-config-header {
+  padding: 20px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.alert-config-header h2 {
+  margin: 0 0 5px;
+  color: #0f172a;
+  font-size: 16px;
+}
+
+.alert-config-header p {
+  margin: 0;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.alert-config-form {
+  padding: 20px;
+}
+
+.alert-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.alert-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.alert-form-field span {
+  color: #334155;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.alert-form-field input,
+.alert-form-field select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 11px;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  outline: none;
+  background: #ffffff;
+  color: #0f172a;
+  font-family: inherit;
+  font-size: 12px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.alert-form-field input:focus,
+.alert-form-field select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.alert-toggle-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+}
+
+.alert-toggle-field input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: #2563eb;
+}
+
+.alert-toggle-field span {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.alert-toggle-field strong {
+  color: #334155;
+  font-size: 12px;
+}
+
+.alert-toggle-field small {
+  color: #64748b;
+  font-size: 10px;
+}
+
+.alert-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.alert-cancel-button,
+.alert-save-button {
+  padding: 9px 14px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.alert-cancel-button {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #475569;
+}
+
+.alert-cancel-button:hover {
+  background: #f8fafc;
+}
+
+.alert-save-button {
+  border: 1px solid #2563eb;
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.alert-save-button:hover {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
+
+/* ================================
+   Alert Configuration - Dark Mode
+================================ */
+
+.dark-mode .alert-config-panel {
+  border-color: #1f2937;
+  background: #111827;
+}
+
+.dark-mode .alert-config-header {
+  border-bottom-color: #1f2937;
+}
+
+.dark-mode .alert-config-header h2 {
+  color: #f9fafb;
+}
+
+.dark-mode .alert-config-header p {
+  color: #6b7280;
+}
+
+.dark-mode .alert-form-field span {
+  color: #d1d5db;
+}
+
+.dark-mode .alert-form-field input,
+.dark-mode .alert-form-field select {
+  border-color: #374151;
+  background: #0f172a;
+  color: #f9fafb;
+}
+
+.dark-mode .alert-form-field input::placeholder {
+  color: #6b7280;
+}
+
+.dark-mode .alert-form-field input:focus,
+.dark-mode .alert-form-field select:focus {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
+}
+
+.dark-mode .alert-toggle-field strong {
+  color: #d1d5db;
+}
+
+.dark-mode .alert-toggle-field small {
+  color: #6b7280;
+}
+
+.dark-mode .alert-form-actions {
+  border-top-color: #1f2937;
+}
+
+.dark-mode .alert-cancel-button {
+  border-color: #374151;
+  background: #0f172a;
+  color: #d1d5db;
+}
+
+.dark-mode .alert-cancel-button:hover {
+  background: #1f2937;
+}
+@media (max-width: 768px) {
+  .alerts-heading-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .alert-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .alert-form-actions {
+    flex-direction: column-reverse;
+  }
+
+  .alert-cancel-button,
+  .alert-save-button {
+    width: 100%;
+  }
+}

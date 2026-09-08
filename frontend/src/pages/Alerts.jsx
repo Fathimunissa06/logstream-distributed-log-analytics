@@ -1,8 +1,10 @@
+import { useState } from "react";
 import {
   AlertCircle,
   BellRing,
   CheckCircle2,
   Clock3,
+  Plus,
   TriangleAlert,
 } from "lucide-react";
 
@@ -64,6 +66,35 @@ function getSeverityIcon(severity) {
 }
 
 function Alerts() {
+  const [showForm, setShowForm] = useState(false);
+
+  const [formData, setFormData] = useState({
+    name: "",
+    service: "billing-api",
+    condition: "Error rate",
+    threshold: "",
+    severity: "HIGH",
+    enabled: true,
+  });
+
+  const handleChange = (event) => {
+    const { name, value, type, checked } = event.target;
+
+    setFormData((current) => ({
+      ...current,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  };
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    setShowForm(false);
+  };
+
+  const handleCancel = () => {
+    setShowForm(false);
+  };
+
   return (
     <div className="alerts-page">
       <div className="page-heading">
@@ -75,11 +106,132 @@ function Alerts() {
           </p>
         </div>
 
-        <div className="live-status">
-          <BellRing size={15} />
-          Alert monitoring
+        <div className="alerts-heading-actions">
+          <div className="live-status">
+            <BellRing size={15} />
+            Alert monitoring
+          </div>
+
+          <button
+            type="button"
+            className="alert-create-button"
+            onClick={() => setShowForm((current) => !current)}
+          >
+            <Plus size={16} />
+            Create Alert
+          </button>
         </div>
       </div>
+
+      {showForm && (
+        <section className="alert-config-panel">
+          <div className="alert-config-header">
+            <div>
+              <h2>Create Alert</h2>
+              <p>Define a rule for monitoring service activity.</p>
+            </div>
+          </div>
+
+          <form className="alert-config-form" onSubmit={handleSubmit}>
+            <div className="alert-form-grid">
+              <label className="alert-form-field">
+                <span>Alert Name</span>
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  placeholder="e.g. High Error Rate"
+                  required
+                />
+              </label>
+
+              <label className="alert-form-field">
+                <span>Service</span>
+                <select
+                  name="service"
+                  value={formData.service}
+                  onChange={handleChange}
+                >
+                  <option value="billing-api">billing-api</option>
+                  <option value="payment-service">payment-service</option>
+                  <option value="order-service">order-service</option>
+                  <option value="auth-service">auth-service</option>
+                </select>
+              </label>
+
+              <label className="alert-form-field">
+                <span>Condition</span>
+                <select
+                  name="condition"
+                  value={formData.condition}
+                  onChange={handleChange}
+                >
+                  <option value="Error rate">Error rate</option>
+                  <option value="Response time">Response time</option>
+                  <option value="Log count">Log count</option>
+                  <option value="Database connection">
+                    Database connection
+                  </option>
+                </select>
+              </label>
+
+              <label className="alert-form-field">
+                <span>Threshold</span>
+                <input
+                  type="text"
+                  name="threshold"
+                  value={formData.threshold}
+                  onChange={handleChange}
+                  placeholder="e.g. 5%"
+                  required
+                />
+              </label>
+
+              <label className="alert-form-field">
+                <span>Severity</span>
+                <select
+                  name="severity"
+                  value={formData.severity}
+                  onChange={handleChange}
+                >
+                  <option value="CRITICAL">Critical</option>
+                  <option value="HIGH">High</option>
+                  <option value="MEDIUM">Medium</option>
+                  <option value="LOW">Low</option>
+                </select>
+              </label>
+
+              <label className="alert-toggle-field">
+                <input
+                  type="checkbox"
+                  name="enabled"
+                  checked={formData.enabled}
+                  onChange={handleChange}
+                />
+                <span>
+                  <strong>Enable alert</strong>
+                  <small>Start monitoring immediately</small>
+                </span>
+              </label>
+            </div>
+
+            <div className="alert-form-actions">
+              <button
+                type="button"
+                className="alert-cancel-button"
+                onClick={handleCancel}
+              >
+                Cancel
+              </button>
+
+              <button type="submit" className="alert-save-button">
+                Save Alert
+              </button>
+            </div>
+          </form>
+        </section>
+      )}
 
       <div className="stats-grid">
         <StatCard
