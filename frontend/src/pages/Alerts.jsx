@@ -49,6 +49,36 @@ const mockAlerts = [
   },
 ];
 
+const conditionConfig = {
+  "Error rate": {
+    unit: "%",
+    placeholder: "e.g. 5",
+    description: "Trigger when the error rate exceeds this percentage.",
+  },
+  "Response time": {
+    unit: "ms",
+    placeholder: "e.g. 2000",
+    description: "Trigger when response time exceeds this value.",
+  },
+  "Log count": {
+    unit: "logs",
+    placeholder: "e.g. 1000",
+    description: "Trigger when log volume exceeds this count.",
+  },
+  "Database connection": {
+    unit: "",
+    placeholder: "e.g. 1 failure",
+    description: "Trigger when a database connection failure is detected.",
+  },
+};
+
+const severityConfig = {
+  CRITICAL: "Immediate attention required",
+  HIGH: "High-priority issue",
+  MEDIUM: "Requires monitoring",
+  LOW: "Informational alert",
+};
+
 function getSeverityIcon(severity) {
   if (severity === "CRITICAL") {
     return <AlertCircle size={14} />;
@@ -76,6 +106,8 @@ function Alerts() {
     severity: "HIGH",
     enabled: true,
   });
+
+  const currentCondition = conditionConfig[formData.condition];
 
   const handleChange = (event) => {
     const { name, value, type, checked } = event.target;
@@ -174,22 +206,36 @@ function Alerts() {
                     Database connection
                   </option>
                 </select>
+
+                <small className="alert-field-help">
+                  {currentCondition.description}
+                </small>
               </label>
 
               <label className="alert-form-field">
                 <span>Threshold</span>
-                <input
-                  type="text"
-                  name="threshold"
-                  value={formData.threshold}
-                  onChange={handleChange}
-                  placeholder="e.g. 5%"
-                  required
-                />
+
+                <div className="threshold-input-wrapper">
+                  <input
+                    type="text"
+                    name="threshold"
+                    value={formData.threshold}
+                    onChange={handleChange}
+                    placeholder={currentCondition.placeholder}
+                    required
+                  />
+
+                  {currentCondition.unit && (
+                    <span className="threshold-unit">
+                      {currentCondition.unit}
+                    </span>
+                  )}
+                </div>
               </label>
 
               <label className="alert-form-field">
                 <span>Severity</span>
+
                 <select
                   name="severity"
                   value={formData.severity}
@@ -200,6 +246,10 @@ function Alerts() {
                   <option value="MEDIUM">Medium</option>
                   <option value="LOW">Low</option>
                 </select>
+
+                <small className="alert-field-help">
+                  {severityConfig[formData.severity]}
+                </small>
               </label>
 
               <label className="alert-toggle-field">
@@ -209,6 +259,7 @@ function Alerts() {
                   checked={formData.enabled}
                   onChange={handleChange}
                 />
+
                 <span>
                   <strong>Enable alert</strong>
                   <small>Start monitoring immediately</small>
