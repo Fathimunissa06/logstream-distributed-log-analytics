@@ -1,33 +1,27 @@
-import { mockLogs } from "../data/mockLogs";
-// import { apiRequest } from "./api";
+import { apiRequest } from "./api";
 
 export async function searchLogs(filters) {
-  const query = filters.search?.trim().toLowerCase() || "";
+  const params = new URLSearchParams();
 
-  const filtered = mockLogs.filter((log) => {
-    const matchesSearch =
-      !query ||
-      log.message.toLowerCase().includes(query) ||
-      log.service.toLowerCase().includes(query) ||
-      log.host.toLowerCase().includes(query) ||
-      log.level.toLowerCase().includes(query);
+  if (filters.search?.trim()) {
+    params.append("q", filters.search);
+  }
 
-    const matchesLevel =
-      filters.level === "ALL" || log.level === filters.level;
+  if (
+    filters.level &&
+    filters.level !== "ALL"
+  ) {
+    params.append("level", filters.level);
+  }
 
-    const matchesService =
-      filters.service === "ALL" || log.service === filters.service;
+  if (
+    filters.service &&
+    filters.service !== "ALL"
+  ) {
+    params.append("service", filters.service);
+  }
 
-    const matchesHost =
-      filters.host === "ALL" || log.host === filters.host;
-
-    return (
-      matchesSearch &&
-      matchesLevel &&
-      matchesService &&
-      matchesHost
-    );
-  });
-
-  return Promise.resolve(filtered);
+  return apiRequest(
+    `/api/search?${params.toString()}`
+  );
 }
