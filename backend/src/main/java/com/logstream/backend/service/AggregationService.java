@@ -4,7 +4,6 @@ import com.logstream.backend.model.LogRecord;
 
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -15,15 +14,9 @@ import java.util.Map;
 /**
  * Week 3: Aggregations.
  *
- * This service does NOT talk to Lucene directly for writing - it only
- * reads back logs that are already indexed and groups ("aggregates")
- * them into buckets that are easy for a chart to draw:
- *
- *   - getLogVolumePerMinute(): "how many logs arrived each minute?"
- *     -> powers the line chart / histogram on the dashboard.
- *
- *   - getLogCountsByLevel(): "how many ERROR vs WARN vs INFO logs?"
- *     -> powers a simple breakdown chart / stat cards.
+ * This service reads logs that are already indexed in Lucene
+ * and groups them into buckets that are easy for the frontend
+ * dashboard to display.
  */
 @Service
 public class AggregationService {
@@ -31,9 +24,7 @@ public class AggregationService {
     private final LuceneService luceneService;
 
     /*
-     * Formats a timestamp down to just "HH:mm" (hours:minutes),
-     * e.g. "14:32". Two logs that both happened at 14:32 will land
-     * in the same bucket even if their seconds differ.
+     * Formats timestamps down to HH:mm.
      */
     private static final DateTimeFormatter MINUTE_FORMAT =
             DateTimeFormatter.ofPattern("HH:mm")
@@ -44,28 +35,40 @@ public class AggregationService {
     }
 
     /**
-     * Returns a map like:
-     *   { "14:28": 12, "14:29": 40, "14:30": 35, ... }
-     * covering the last `lastMinutes` minutes, including minutes
-     * with zero logs (so the chart doesn't have confusing gaps).
+     * Returns log volume for each minute in the requested window.
+     *
+     * Example:
+     * { "14:28": 12, "14:29": 40, "14:30": 35 }
      */
-    public Map<String, Long> getLogVolumePerMinute(int lastMinutes) {
+    public Map<String, Long> getLogVolumePerMinute(
+            int lastMinutes) {
 
-        long toMillis = System.currentTimeMillis();
-        long fromMillis = toMillis - (lastMinutes * 60_000L);
+        long toMillis =
+                System.currentTimeMillis();
 
-        Map<String, Long> buckets = new LinkedHashMap<>();
+        long fromMillis =
+                toMillis -
+                        (lastMinutes * 60_000L);
+
+        Map<String, Long> buckets =
+                new LinkedHashMap<>();
 
         /*
-         * Step 1: pre-fill every minute in the window with 0.
-         * LinkedHashMap keeps insertion order, so the chart's
-         * x-axis will already be in correct time order.
+         * Pre-fill every minute with zero.
+         *
+         * This keeps the chart continuous even when
+         * there are no logs during a particular minute.
          */
-        for (int i = lastMinutes - 1; i >= 0; i--) {
+        for (int i = lastMinutes - 1;
+             i >= 0;
+             i--) {
 
             String label =
                     MINUTE_FORMAT.format(
-                            Instant.ofEpochMilli(toMillis - (i * 60_000L))
+                            Instant.ofEpochMilli(
+                                    toMillis -
+                                            (i * 60_000L)
+                            )
                     );
 
             buckets.put(label, 0L);
@@ -74,9 +77,10 @@ public class AggregationService {
         try {
 
             /*
-             * Step 2: pull back every log in this time window
-             * (capped at 50,000 so a huge index can't overload
-             * the server memory on a single chart request).
+             * Pull logs from the requested time window.
+             *
+             * The 50,000 limit prevents an extremely large
+             * result from consuming excessive memory.
              */
             List<LogRecord> logs =
                     luceneService.searchByTimeRange(
@@ -86,26 +90,39 @@ public class AggregationService {
                     );
 
             /*
-             * Step 3: drop each log into its minute bucket.
+             * Put every log into its corresponding
+             * minute bucket.
              */
             for (LogRecord log : logs) {
 
                 try {
 
                     Instant instant =
-                            Instant.parse(log.getTimestamp());
+                            Instant.parse(
+                                    log.getTimestamp()
+                            );
 
                     String label =
-                            MINUTE_FORMAT.format(instant);
+                            MINUTE_FORMAT.format(
+                                    instant
+                            );
 
-                    buckets.merge(label, 1L, Long::sum);
+                    buckets.merge(
+                            label,
+                            1L,
+                            Long::sum
+                    );
 
                 } catch (Exception ignored) {
-                    // Skip any log with a missing/unparseable timestamp.
+
+                    /*
+                     * Ignore logs with missing or
+                     * invalid timestamps.
+                     */
                 }
             }
 
-        } catch (IOException e) {
+        } catch (Exception e) {
 
             throw new RuntimeException(
                     "Failed to compute log volume",
@@ -117,16 +134,24 @@ public class AggregationService {
     }
 
     /**
-     * Returns a map like:
-     *   { "ERROR": 342, "WARN": 128, "INFO": 900 }
-     * for the last `lastMinutes` minutes.
+     * Returns the number of logs grouped by level
+     * for the requested time window.
+     *
+     * Example:
+     * { "ERROR": 342, "WARN": 128, "INFO": 900 }
      */
-    public Map<String, Long> getLogCountsByLevel(int lastMinutes) {
+    public Map<String, Long> getLogCountsByLevel(
+            int lastMinutes) {
 
-        long toMillis = System.currentTimeMillis();
-        long fromMillis = toMillis - (lastMinutes * 60_000L);
+        long toMillis =
+                System.currentTimeMillis();
 
-        Map<String, Long> counts = new LinkedHashMap<>();
+        long fromMillis =
+                toMillis -
+                        (lastMinutes * 60_000L);
+
+        Map<String, Long> counts =
+                new LinkedHashMap<>();
 
         try {
 
@@ -140,14 +165,19 @@ public class AggregationService {
             for (LogRecord log : logs) {
 
                 String level =
-                        (log.getLevel() == null || log.getLevel().isBlank())
+                        (log.getLevel() == null ||
+                                log.getLevel().isBlank())
                                 ? "UNKNOWN"
                                 : log.getLevel();
 
-                counts.merge(level, 1L, Long::sum);
+                counts.merge(
+                        level,
+                        1L,
+                        Long::sum
+                );
             }
 
-        } catch (IOException e) {
+        } catch (Exception e) {
 
             throw new RuntimeException(
                     "Failed to compute level counts",
