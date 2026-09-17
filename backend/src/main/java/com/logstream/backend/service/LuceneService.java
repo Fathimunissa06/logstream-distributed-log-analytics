@@ -23,6 +23,7 @@ import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.MatchAllDocsQuery;
+import org.apache.lucene.search.TermRangeQuery;
 
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
@@ -32,6 +33,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -370,6 +372,10 @@ public class LuceneService {
 
                 /*
                  * Return top 100 results.
+                 *
+                 * This limit is only for the normal
+                 * search API. Alert counting uses
+                 * countLogs() below.
                  */
                 var topDocs =
                         searcher.search(
@@ -413,6 +419,151 @@ public class LuceneService {
 
             throw new RuntimeException(
                     "Failed to search logs",
+                    e
+            );
+        }
+    }
+
+    /**
+     * Count matching logs without the 100-result limit.
+     *
+     * Used by the Alerting Engine to evaluate
+     * threshold-based queries.
+     */
+    public int countLogs(
+            String service,
+            String level,
+            Instant since,
+            Instant until) {
+
+        try {
+
+            /*
+             * Make recently indexed documents visible
+             * before counting.
+             */
+            synchronized (commitLock) {
+
+                if (pendingDocuments.get() > 0) {
+
+                    indexWriter.commit();
+
+                    pendingDocuments.set(0);
+                }
+            }
+
+            if (!DirectoryReader.indexExists(
+                    directory)) {
+
+                return 0;
+            }
+
+            try (DirectoryReader reader =
+                         DirectoryReader.open(directory)) {
+
+                IndexSearcher searcher =
+                        new IndexSearcher(reader);
+
+                BooleanQuery.Builder builder =
+                        new BooleanQuery.Builder();
+
+                boolean hasQuery = false;
+
+                /*
+                 * Service filter.
+                 */
+                if (service != null &&
+                        !service.trim().isEmpty()) {
+
+                    builder.add(
+                            new TermQuery(
+                                    new Term(
+                                            "service",
+                                            service
+                                    )
+                            ),
+                            BooleanClause.Occur.MUST
+                    );
+
+                    hasQuery = true;
+                }
+
+                /*
+                 * Level filter.
+                 */
+                if (level != null &&
+                        !level.trim().isEmpty()) {
+
+                    builder.add(
+                            new TermQuery(
+                                    new Term(
+                                            "level",
+                                            level
+                                    )
+                            ),
+                            BooleanClause.Occur.MUST
+                    );
+
+                    hasQuery = true;
+                }
+
+                /*
+                 * Time-window filter.
+                 *
+                 * Timestamps are stored as ISO-8601 strings.
+                 */
+                if (since != null || until != null) {
+
+                    String lower =
+                            since != null
+                                    ? since.toString()
+                                    : null;
+
+                    String upper =
+                            until != null
+                                    ? until.toString()
+                                    : null;
+
+                    builder.add(
+                            TermRangeQuery.newStringRange(
+                                    "timestamp",
+                                    lower,
+                                    upper,
+                                    true,
+                                    true
+                            ),
+                            BooleanClause.Occur.MUST
+                    );
+
+                    hasQuery = true;
+                }
+
+                Query finalQuery;
+
+                if (hasQuery) {
+
+                    finalQuery =
+                            builder.build();
+
+                } else {
+
+                    finalQuery =
+                            new MatchAllDocsQuery();
+                }
+
+                /*
+                 * IMPORTANT:
+                 *
+                 * count() counts ALL matching documents.
+                 * It does not retrieve only the top 100.
+                 */
+                return searcher.count(finalQuery);
+            }
+
+        } catch (Exception e) {
+
+            throw new RuntimeException(
+                    "Failed to count logs",
                     e
             );
         }

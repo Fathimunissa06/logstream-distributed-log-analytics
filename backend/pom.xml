@@ -68,6 +68,7 @@
             <version>${grpc.version}</version>
         </dependency>
 
+        <!-- Protocol Buffers -->
         <dependency>
             <groupId>com.google.protobuf</groupId>
             <artifactId>protobuf-java</artifactId>
@@ -113,6 +114,7 @@
 
         <extensions>
 
+            <!-- Detects operating system for protoc executable -->
             <extension>
                 <groupId>kr.motd.maven</groupId>
                 <artifactId>os-maven-plugin</artifactId>
@@ -129,7 +131,7 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
 
-            <!-- Protobuf -->
+            <!-- Protocol Buffers + gRPC -->
             <plugin>
                 <groupId>org.xolstice.maven.plugins</groupId>
                 <artifactId>protobuf-maven-plugin</artifactId>
@@ -137,23 +139,33 @@
 
                 <configuration>
 
+                    <!-- Protobuf compiler -->
                     <protocArtifact>
                         com.google.protobuf:protoc:${protobuf.version}:exe:${os.detected.classifier}
                     </protocArtifact>
 
+                    <!-- gRPC Java compiler -->
                     <pluginId>grpc-java</pluginId>
 
                     <pluginArtifact>
                         io.grpc:protoc-gen-grpc-java:${grpc.version}:exe:${os.detected.classifier}
                     </pluginArtifact>
 
+                    <!-- Keep generated protobuf and gRPC sources together -->
+                    <clearOutputDirectory>false</clearOutputDirectory>
+
                 </configuration>
 
                 <executions>
 
                     <execution>
+                        <id>compile-protobuf</id>
+
                         <goals>
+                            <!-- Generate protobuf Java classes -->
                             <goal>compile</goal>
+
+                            <!-- Generate gRPC Java classes -->
                             <goal>compile-custom</goal>
                         </goals>
                     </execution>
