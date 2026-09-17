@@ -1,53 +1,19 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import "./Alerts.css";
 import {
-  AlertCircle,
-  BellRing,
-  CheckCircle2,
-  Clock3,
+  AlertTriangle,
+  Bell,
+  CheckCircle,
+  Clock,
   Plus,
-  TriangleAlert,
+  Trash2,
+  X,
 } from "lucide-react";
-
-import StatCard from "../components/dashboard/StatCard";
-
-const mockAlerts = [
-  {
-    id: 1,
-    name: "High Error Rate",
-    service: "billing-api",
-    severity: "CRITICAL",
-    status: "TRIGGERED",
-    condition: "Error rate > 5%",
-    lastTriggered: "2 minutes ago",
-  },
-  {
-    id: 2,
-    name: "Database Connection Failure",
-    service: "payment-service",
-    severity: "HIGH",
-    status: "TRIGGERED",
-    condition: "Database connection failed",
-    lastTriggered: "8 minutes ago",
-  },
-  {
-    id: 3,
-    name: "High Response Latency",
-    service: "order-service",
-    severity: "MEDIUM",
-    status: "ACTIVE",
-    condition: "Response time > 2s",
-    lastTriggered: "24 minutes ago",
-  },
-  {
-    id: 4,
-    name: "Service Recovery",
-    service: "auth-service",
-    severity: "LOW",
-    status: "RESOLVED",
-    condition: "Service became healthy",
-    lastTriggered: "1 hour ago",
-  },
-];
+import {
+  getAlerts,
+  createAlert,
+  deleteAlert,
+} from "../services/alertService";
 
 const conditionConfig = {
   "Error rate": {
@@ -63,196 +29,376 @@ const conditionConfig = {
   "Log count": {
     unit: "logs",
     placeholder: "e.g. 1000",
-    description: "Trigger when log volume exceeds this count.",
+    description: "Trigger when log count exceeds this value.",
   },
   "Database connection": {
     unit: "",
-    placeholder: "e.g. 1 failure",
-    description: "Trigger when a database connection failure is detected.",
+    placeholder: "e.g. 1",
+    description: "Trigger when database connection failures occur.",
   },
 };
 
 const severityConfig = {
-  CRITICAL: "Immediate attention required",
-  HIGH: "High-priority issue",
-  MEDIUM: "Requires monitoring",
-  LOW: "Informational alert",
+  CRITICAL: {
+    description: "Immediate attention required",
+  },
+  HIGH: {
+    description: "High-priority issue",
+  },
+  MEDIUM: {
+    description: "Requires monitoring",
+  },
+  LOW: {
+    description: "Informational alert",
+  },
 };
 
-function getSeverityIcon(severity) {
-  if (severity === "CRITICAL") {
-    return <AlertCircle size={14} />;
-  }
-
-  if (severity === "HIGH") {
-    return <TriangleAlert size={14} />;
-  }
-
-  if (severity === "MEDIUM") {
-    return <Clock3 size={14} />;
-  }
-
-  return <BellRing size={14} />;
-}
-
 function Alerts() {
+  const [alerts, setAlerts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [showForm, setShowForm] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
-    service: "billing-api",
+    service: "ALL",
     condition: "Error rate",
     threshold: "",
     severity: "HIGH",
     enabled: true,
   });
 
-  const currentCondition = conditionConfig[formData.condition];
+  useEffect(() => {
+    let cancelled = false;
 
-  const handleChange = (event) => {
+    async function fetchAlerts() {
+      try {
+        const data = await getAlerts();
+
+        if (!cancelled) {
+          setAlerts(Array.isArray(data) ? data : []);
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error(err);
+
+        if (!cancelled) {
+          setError("Unable to load alerts from the server.");
+          setLoading(false);
+        }
+      }
+    }
+
+    fetchAlerts();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  function handleChange(event) {
     const { name, value, type, checked } = event.target;
 
     setFormData((current) => ({
       ...current,
       [name]: type === "checkbox" ? checked : value,
     }));
-  };
+  }
 
-  const handleSubmit = (event) => {
+  function handleConditionChange(event) {
+    const condition = event.target.value;
+
+    setFormData((current) => ({
+      ...current,
+      condition,
+      threshold: "",
+    }));
+  }
+
+  async function handleSubmit(event) {
     event.preventDefault();
-    setShowForm(false);
-  };
 
-  const handleCancel = () => {
-    setShowForm(false);
-  };
+    if (!formData.name.trim()) {
+      setError("Please enter an alert name.");
+      return;
+    }
+
+    if (!formData.threshold) {
+      setError("Please enter a threshold.");
+      return;
+    }
+
+    try {
+      setError("");
+
+      const createdAlert = await createAlert({
+        name: formData.name.trim(),
+        service: formData.service,
+        condition: formData.condition,
+        threshold: Number(formData.threshold),
+        severity: formData.severity,
+        enabled: formData.enabled,
+      });
+
+      setAlerts((current) => [createdAlert, ...current]);
+
+      setFormData({
+        name: "",
+        service: "ALL",
+        condition: "Error rate",
+        threshold: "",
+        severity: "HIGH",
+        enabled: true,
+      });
+
+      setShowForm(false);
+    } catch (err) {
+      console.error(err);
+      setError("Unable to create alert.");
+    }
+  }
+
+  async function handleDeleteAlert(id) {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this alert?"
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setError("");
+
+      await deleteAlert(id);
+
+      setAlerts((current) =>
+        current.filter((alert) => alert.id !== id)
+      );
+    } catch (err) {
+      console.error(err);
+      setError("Unable to delete alert.");
+    }
+  }
+
+  const activeAlerts = alerts.filter(
+    (alert) => alert.enabled
+  ).length;
+
+  const triggeredAlerts = alerts.filter(
+    (alert) => alert.triggered
+  ).length;
+
+  const resolvedAlerts = alerts.filter(
+    (alert) => !alert.triggered && alert.lastTriggered
+  ).length;
 
   return (
-    <div className="alerts-page">
-      <div className="page-heading">
+    <div className="page-container alerts-page">
+      <div className="page-header">
         <div>
-          <span className="page-eyebrow">ALERT CENTER</span>
           <h1>Alerts</h1>
           <p>
-            Monitor configured alerts and review recent alert activity.
+            Configure and monitor alerts for your distributed services.
           </p>
         </div>
 
-        <div className="alerts-heading-actions">
-          <div className="live-status">
-            <BellRing size={15} />
-            Alert monitoring
-          </div>
+        <button
+          className="primary-button"
+          onClick={() => {
+            setError("");
+            setShowForm(true);
+          }}
+        >
+          <Plus size={18} />
+          Create Alert
+        </button>
+      </div>
+
+      {error && (
+        <div className="alert-error-message">
+          <AlertTriangle size={18} />
+          <span>{error}</span>
 
           <button
-            type="button"
-            className="alert-create-button"
-            onClick={() => setShowForm((current) => !current)}
+            onClick={() => setError("")}
+            aria-label="Close error"
           >
-            <Plus size={16} />
-            Create Alert
+            <X size={16} />
           </button>
+        </div>
+      )}
+
+      <div className="stats-grid">
+        <div className="stat-card">
+          <div className="stat-icon">
+            <Bell size={22} />
+          </div>
+
+          <div>
+            <span className="stat-label">Total Alerts</span>
+            <strong>{alerts.length}</strong>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-icon">
+            <CheckCircle size={22} />
+          </div>
+
+          <div>
+            <span className="stat-label">Active</span>
+            <strong>{activeAlerts}</strong>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-icon">
+            <AlertTriangle size={22} />
+          </div>
+
+          <div>
+            <span className="stat-label">Triggered</span>
+            <strong>{triggeredAlerts}</strong>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-icon">
+            <Clock size={22} />
+          </div>
+
+          <div>
+            <span className="stat-label">Resolved</span>
+            <strong>{resolvedAlerts}</strong>
+          </div>
         </div>
       </div>
 
       {showForm && (
-        <section className="alert-config-panel">
-          <div className="alert-config-header">
-            <div>
-              <h2>Create Alert</h2>
-              <p>Define a rule for monitoring service activity.</p>
-            </div>
-          </div>
+        <div className="alert-form-overlay">
+          <div className="alert-form-card">
+            <div className="alert-form-header">
+              <div>
+                <h2>Create Alert</h2>
+                <p>Configure a new monitoring rule.</p>
+              </div>
 
-          <form className="alert-config-form" onSubmit={handleSubmit}>
-            <div className="alert-form-grid">
-              <label className="alert-form-field">
-                <span>Alert Name</span>
+              <button
+                className="icon-button"
+                onClick={() => setShowForm(false)}
+                aria-label="Close form"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit}>
+              <div className="form-group">
+                <label htmlFor="name">Alert Name</label>
+
                 <input
-                  type="text"
+                  id="name"
                   name="name"
+                  type="text"
                   value={formData.name}
                   onChange={handleChange}
                   placeholder="e.g. High Error Rate"
-                  required
                 />
-              </label>
+              </div>
 
-              <label className="alert-form-field">
-                <span>Service</span>
+              <div className="form-group">
+                <label htmlFor="service">Service</label>
+
                 <select
+                  id="service"
                   name="service"
                   value={formData.service}
                   onChange={handleChange}
                 >
+                  <option value="ALL">All Services</option>
                   <option value="billing-api">billing-api</option>
-                  <option value="payment-service">payment-service</option>
-                  <option value="order-service">order-service</option>
-                  <option value="auth-service">auth-service</option>
+                  <option value="payment-service">
+                    payment-service
+                  </option>
+                  <option value="order-service">
+                    order-service
+                  </option>
+                  <option value="auth-service">
+                    auth-service
+                  </option>
                 </select>
-              </label>
+              </div>
 
-              <label className="alert-form-field">
-                <span>Condition</span>
+              <div className="form-group">
+                <label htmlFor="condition">Condition</label>
+
                 <select
+                  id="condition"
                   name="condition"
                   value={formData.condition}
-                  onChange={handleChange}
+                  onChange={handleConditionChange}
                 >
                   <option value="Error rate">Error rate</option>
-                  <option value="Response time">Response time</option>
+                  <option value="Response time">
+                    Response time
+                  </option>
                   <option value="Log count">Log count</option>
                   <option value="Database connection">
                     Database connection
                   </option>
                 </select>
 
-                <small className="alert-field-help">
-                  {currentCondition.description}
+                <small className="form-help">
+                  {conditionConfig[formData.condition]?.description}
                 </small>
-              </label>
+              </div>
 
-              <label className="alert-form-field">
-                <span>Threshold</span>
+              <div className="form-group">
+                <label htmlFor="threshold">Threshold</label>
 
                 <div className="threshold-input-wrapper">
                   <input
-                    type="text"
+                    id="threshold"
                     name="threshold"
+                    type="number"
+                    min="0"
                     value={formData.threshold}
                     onChange={handleChange}
-                    placeholder={currentCondition.placeholder}
-                    required
+                    placeholder={
+                      conditionConfig[formData.condition]?.placeholder
+                    }
                   />
 
-                  {currentCondition.unit && (
+                  {conditionConfig[formData.condition]?.unit && (
                     <span className="threshold-unit">
-                      {currentCondition.unit}
+                      {conditionConfig[formData.condition].unit}
                     </span>
                   )}
                 </div>
-              </label>
+              </div>
 
-              <label className="alert-form-field">
-                <span>Severity</span>
+              <div className="form-group">
+                <label htmlFor="severity">Severity</label>
 
                 <select
+                  id="severity"
                   name="severity"
                   value={formData.severity}
                   onChange={handleChange}
                 >
-                  <option value="CRITICAL">Critical</option>
-                  <option value="HIGH">High</option>
-                  <option value="MEDIUM">Medium</option>
-                  <option value="LOW">Low</option>
+                  <option value="CRITICAL">CRITICAL</option>
+                  <option value="HIGH">HIGH</option>
+                  <option value="MEDIUM">MEDIUM</option>
+                  <option value="LOW">LOW</option>
                 </select>
 
-                <small className="alert-field-help">
-                  {severityConfig[formData.severity]}
+                <small className="form-help">
+                  {severityConfig[formData.severity]?.description}
                 </small>
-              </label>
+              </div>
 
-              <label className="alert-toggle-field">
+              <label className="toggle-row">
                 <input
                   type="checkbox"
                   name="enabled"
@@ -262,102 +408,159 @@ function Alerts() {
 
                 <span>
                   <strong>Enable alert</strong>
-                  <small>Start monitoring immediately</small>
+                  <small>
+                    Start monitoring this rule immediately.
+                  </small>
                 </span>
               </label>
-            </div>
 
-            <div className="alert-form-actions">
-              <button
-                type="button"
-                className="alert-cancel-button"
-                onClick={handleCancel}
-              >
-                Cancel
-              </button>
+              <div className="form-actions">
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => setShowForm(false)}
+                >
+                  Cancel
+                </button>
 
-              <button type="submit" className="alert-save-button">
-                Save Alert
-              </button>
-            </div>
-          </form>
-        </section>
+                <button
+                  type="submit"
+                  className="primary-button"
+                >
+                  <Plus size={18} />
+                  Create Alert
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
-      <div className="stats-grid">
-        <StatCard
-          label="Total Alerts"
-          value="12"
-          trend="+2"
-          description="configured alerts"
-          trendDirection="up"
-        />
-
-        <StatCard
-          label="Active Alerts"
-          value="5"
-          trend="+1"
-          description="currently active"
-          trendDirection="up"
-        />
-
-        <StatCard
-          label="Triggered"
-          value="3"
-          trend="+2"
-          description="in the last hour"
-          trendDirection="up"
-        />
-
-        <StatCard
-          label="Resolved"
-          value="4"
-          trend="+3"
-          description="in the last hour"
-          trendDirection="up"
-        />
-      </div>
-
       <section className="alerts-section">
-        <div className="alerts-section-header">
+        <div className="section-header">
           <div>
             <h2>Alert Activity</h2>
-            <p>Recent alerts across distributed services.</p>
+            <p>
+              Current alert rules and their monitoring status.
+            </p>
           </div>
         </div>
 
-        <div className="alerts-list">
-          {mockAlerts.map((alert) => (
-            <div className="alert-item" key={alert.id}>
-              <div className="alert-main">
-                <div className="alert-title-row">
-                  <h3>{alert.name}</h3>
+        {loading ? (
+          <div className="alerts-empty-state">
+            <div className="loading-spinner"></div>
+            <p>Loading alerts...</p>
+          </div>
+        ) : alerts.length === 0 ? (
+          <div className="alerts-empty-state">
+            <Bell size={36} />
+            <h3>No alerts configured</h3>
+            <p>
+              Create your first alert rule to start monitoring
+              your services.
+            </p>
 
+            <button
+              className="primary-button"
+              onClick={() => setShowForm(true)}
+            >
+              <Plus size={18} />
+              Create Alert
+            </button>
+          </div>
+        ) : (
+          <div className="alerts-list">
+            {alerts.map((alert) => (
+              <div
+                className={`alert-item ${
+                  alert.triggered ? "alert-triggered" : ""
+                }`}
+                key={alert.id}
+              >
+                <div className="alert-main">
+                  <div className="alert-icon">
+                    {alert.triggered ? (
+                      <AlertTriangle size={20} />
+                    ) : (
+                      <Bell size={20} />
+                    )}
+                  </div>
+
+                  <div className="alert-content">
+                    <div className="alert-title-row">
+                      <h3>{alert.name}</h3>
+
+                      <span
+                        className={`severity-badge severity-${String(
+                          alert.severity || "LOW"
+                        ).toLowerCase()}`}
+                      >
+                        {alert.severity}
+                      </span>
+                    </div>
+
+                    <div className="alert-details">
+                      <span>
+                        Service:{" "}
+                        <strong>
+                          {alert.service || "All Services"}
+                        </strong>
+                      </span>
+
+                      <span>
+                        Condition:{" "}
+                        <strong>{alert.condition}</strong>
+                      </span>
+
+                      <span>
+                        Threshold:{" "}
+                        <strong>{alert.threshold}</strong>
+                      </span>
+                    </div>
+
+                    {alert.lastTriggered && (
+                      <div className="alert-last-triggered">
+                        Last triggered:{" "}
+                        {new Date(
+                          alert.lastTriggered
+                        ).toLocaleString()}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="alert-actions">
                   <span
-                    className={`alert-severity ${alert.severity.toLowerCase()}`}
+                    className={`status-badge ${
+                      alert.triggered
+                        ? "status-triggered"
+                        : alert.enabled
+                        ? "status-active"
+                        : "status-disabled"
+                    }`}
                   >
-                    {getSeverityIcon(alert.severity)}
-                    {alert.severity}
+                    {alert.triggered
+                      ? "Triggered"
+                      : alert.enabled
+                      ? "Active"
+                      : "Disabled"}
                   </span>
-                </div>
 
-                <p className="alert-condition">{alert.condition}</p>
-
-                <div className="alert-meta">
-                  <span>{alert.service}</span>
-                  <span>Last triggered {alert.lastTriggered}</span>
+                  <button
+                    className="delete-alert-button"
+                    onClick={() =>
+                      handleDeleteAlert(alert.id)
+                    }
+                    title="Delete alert"
+                    aria-label={`Delete ${alert.name}`}
+                  >
+                    <Trash2 size={18} />
+                  </button>
                 </div>
               </div>
-
-              <div className={`alert-status ${alert.status.toLowerCase()}`}>
-                {alert.status === "RESOLVED" && (
-                  <CheckCircle2 size={14} />
-                )}
-                {alert.status}
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );
