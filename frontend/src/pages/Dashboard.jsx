@@ -3,6 +3,7 @@ import { Activity } from "lucide-react";
 import StatCard from "../components/dashboard/StatCard";
 import RecentLogs from "../components/dashboard/RecentLogs";
 import { mockLogs } from "../data/mockLogs";
+import LogAnalytics from "../components/dashboard/LogAnalytics";
 
 function Dashboard() {
   return (
@@ -56,6 +57,7 @@ function Dashboard() {
           trendDirection="up"
         />
       </div>
+      <LogAnalytics />
 
       <RecentLogs logs={mockLogs} />
     </div>
