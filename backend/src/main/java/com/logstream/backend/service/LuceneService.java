@@ -22,7 +22,12 @@ import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TermQuery;
+import org.apache.lucene.search.TermRangeQuery;
 import org.apache.lucene.search.MatchAllDocsQuery;
+import org.apache.lucene.util.BytesRef;
+
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
@@ -416,6 +421,185 @@ public class LuceneService {
                     e
             );
         }
+    }
+
+    /**
+     * Count logs matching the given filters within a time range.
+     * Used by AlertService to evaluate alert rule thresholds.
+     */
+    public long countLogs(
+            String keyword,
+            String service,
+            String level,
+            long fromMillis,
+            long toMillis) throws IOException {
+
+        List<LogRecord> matches =
+                searchWithTimeRange(
+                        keyword,
+                        service,
+                        level,
+                        fromMillis,
+                        toMillis,
+                        Integer.MAX_VALUE
+                );
+
+        return matches.size();
+    }
+
+    /**
+     * Fetch every log within a time range (no keyword/service/level
+     * filters). Used by AggregationService for volume and level charts.
+     */
+    public List<LogRecord> searchByTimeRange(
+            long fromMillis,
+            long toMillis,
+            int limit) throws IOException {
+
+        return searchWithTimeRange(
+                null,
+                null,
+                null,
+                fromMillis,
+                toMillis,
+                limit
+        );
+    }
+
+    /**
+     * Shared implementation: same filter logic as searchLogs(), plus
+     * a range clause on the "timestamp" field. Timestamps are stored
+     * as ISO-8601 strings, which sort correctly lexicographically, so
+     * a TermRangeQuery works without needing a separate numeric field.
+     */
+    private List<LogRecord> searchWithTimeRange(
+            String keyword,
+            String service,
+            String level,
+            long fromMillis,
+            long toMillis,
+            int limit) throws IOException {
+
+        List<LogRecord> results =
+                new ArrayList<>();
+
+        synchronized (commitLock) {
+
+            if (pendingDocuments.get() > 0) {
+
+                indexWriter.commit();
+
+                pendingDocuments.set(0);
+            }
+        }
+
+        if (!DirectoryReader.indexExists(directory)) {
+
+            return results;
+        }
+
+        try (DirectoryReader reader =
+                     DirectoryReader.open(directory)) {
+
+            IndexSearcher searcher =
+                    new IndexSearcher(reader);
+
+            BooleanQuery.Builder builder =
+                    new BooleanQuery.Builder();
+
+            if (keyword != null &&
+                    !keyword.trim().isEmpty()) {
+
+                try {
+
+                    Query keywordQuery =
+                            new org.apache.lucene.queryparser.classic.QueryParser(
+                                    "message",
+                                    analyzer
+                            ).parse(keyword);
+
+                    builder.add(
+                            keywordQuery,
+                            BooleanClause.Occur.MUST
+                    );
+
+                } catch (Exception e) {
+
+                    throw new IOException(
+                            "Failed to parse keyword query",
+                            e
+                    );
+                }
+            }
+
+            if (service != null &&
+                    !service.trim().isEmpty()) {
+
+                builder.add(
+                        new TermQuery(
+                                new Term("service", service)
+                        ),
+                        BooleanClause.Occur.MUST
+                );
+            }
+
+            if (level != null &&
+                    !level.trim().isEmpty()) {
+
+                builder.add(
+                        new TermQuery(
+                                new Term("level", level)
+                        ),
+                        BooleanClause.Occur.MUST
+                );
+            }
+
+            String fromLabel =
+                    DateTimeFormatter.ISO_INSTANT.format(
+                            Instant.ofEpochMilli(fromMillis)
+                    );
+
+            String toLabel =
+                    DateTimeFormatter.ISO_INSTANT.format(
+                            Instant.ofEpochMilli(toMillis)
+                    );
+
+            builder.add(
+                    new TermRangeQuery(
+                            "timestamp",
+                            new BytesRef(fromLabel),
+                            new BytesRef(toLabel),
+                            true,
+                            true
+                    ),
+                    BooleanClause.Occur.MUST
+            );
+
+            Query finalQuery = builder.build();
+
+            var topDocs =
+                    searcher.search(finalQuery, Math.max(limit, 1));
+
+            for (var scoreDoc : topDocs.scoreDocs) {
+
+                Document document =
+                        searcher
+                                .storedFields()
+                                .document(scoreDoc.doc);
+
+                LogRecord log =
+                        new LogRecord(
+                                document.get("timestamp"),
+                                document.get("service"),
+                                document.get("level"),
+                                document.get("message")
+                        );
+
+                results.add(log);
+            }
+        }
+
+        return results;
     }
 
     /**
