@@ -6,7 +6,7 @@ import io.grpc.ManagedChannelBuilder;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class GrpcPerformanceTest {
+public class GrpcPerformanceTest1 {
 
     private static final int TOTAL_LOGS = 100_000;
 
@@ -90,9 +90,9 @@ public class GrpcPerformanceTest {
                                             )
                                             .setMessage(
                                                     "High throughput test log "
-                                                    + i
-                                                    + "-"
-                                                    + j
+                                                            + i
+                                                            + "-"
+                                                            + j
                                             )
                                             .build();
 
@@ -121,7 +121,7 @@ public class GrpcPerformanceTest {
 
                             System.out.println(
                                     "Batch failed: "
-                                    + response.getMessage()
+                                            + response.getMessage()
                             );
                         }
                     }
@@ -130,7 +130,7 @@ public class GrpcPerformanceTest {
 
                     System.out.println(
                             "Worker failed: "
-                            + e.getMessage()
+                                    + e.getMessage()
                     );
 
                     e.printStackTrace();

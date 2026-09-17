@@ -321,9 +321,12 @@ public class LuceneService {
 
                 /*
                  * Service filter.
+                 *
+                 * "ALL" means no service filtering.
                  */
                 if (service != null &&
-                        !service.trim().isEmpty()) {
+                        !service.trim().isEmpty() &&
+                        !service.equalsIgnoreCase("ALL")) {
 
                     builder.add(
                             new TermQuery(
@@ -340,9 +343,12 @@ public class LuceneService {
 
                 /*
                  * Level filter.
+                 *
+                 * "ALL" means no level filtering.
                  */
                 if (level != null &&
-                        !level.trim().isEmpty()) {
+                        !level.trim().isEmpty() &&
+                        !level.equalsIgnoreCase("ALL")) {
 
                     builder.add(
                             new TermQuery(
@@ -425,6 +431,124 @@ public class LuceneService {
     }
 
     /**
+     * Search logs within a specific time range.
+     *
+     * Used by AggregationService for analytics.
+     */
+    public List<LogRecord> searchByTimeRange(
+            long fromMillis,
+            long toMillis,
+            int limit) {
+
+        List<LogRecord> results =
+                new ArrayList<>();
+
+        try {
+
+            /*
+             * Make recently indexed documents visible
+             * before searching.
+             */
+            synchronized (commitLock) {
+
+                if (pendingDocuments.get() > 0) {
+
+                    indexWriter.commit();
+
+                    pendingDocuments.set(0);
+                }
+            }
+
+            if (!DirectoryReader.indexExists(
+                    directory)) {
+
+                return results;
+            }
+
+            try (DirectoryReader reader =
+                         DirectoryReader.open(directory)) {
+
+                IndexSearcher searcher =
+                        new IndexSearcher(reader);
+
+                BooleanQuery.Builder builder =
+                        new BooleanQuery.Builder();
+
+                /*
+                 * Timestamp range.
+                 */
+                String lower =
+                        Instant.ofEpochMilli(
+                                fromMillis
+                        ).toString();
+
+                String upper =
+                        Instant.ofEpochMilli(
+                                toMillis
+                        ).toString();
+
+                builder.add(
+                        TermRangeQuery.newStringRange(
+                                "timestamp",
+                                lower,
+                                upper,
+                                true,
+                                true
+                        ),
+                        BooleanClause.Occur.MUST
+                );
+
+                Query finalQuery =
+                        builder.build();
+
+                var topDocs =
+                        searcher.search(
+                                finalQuery,
+                                Math.max(limit, 1)
+                        );
+
+                for (var scoreDoc :
+                        topDocs.scoreDocs) {
+
+                    Document document =
+                            searcher
+                                    .storedFields()
+                                    .document(
+                                            scoreDoc.doc
+                                    );
+
+                    LogRecord log =
+                            new LogRecord(
+                                    document.get(
+                                            "timestamp"
+                                    ),
+                                    document.get(
+                                            "service"
+                                    ),
+                                    document.get(
+                                            "level"
+                                    ),
+                                    document.get(
+                                            "message"
+                                    )
+                            );
+
+                    results.add(log);
+                }
+            }
+
+            return results;
+
+        } catch (Exception e) {
+
+            throw new RuntimeException(
+                    "Failed to search logs by time range",
+                    e
+            );
+        }
+    }
+
+    /**
      * Count matching logs without the 100-result limit.
      *
      * Used by the Alerting Engine to evaluate
@@ -471,9 +595,12 @@ public class LuceneService {
 
                 /*
                  * Service filter.
+                 *
+                 * "ALL" means no service filtering.
                  */
                 if (service != null &&
-                        !service.trim().isEmpty()) {
+                        !service.trim().isEmpty() &&
+                        !service.equalsIgnoreCase("ALL")) {
 
                     builder.add(
                             new TermQuery(
@@ -490,9 +617,12 @@ public class LuceneService {
 
                 /*
                  * Level filter.
+                 *
+                 * "ALL" means no level filtering.
                  */
                 if (level != null &&
-                        !level.trim().isEmpty()) {
+                        !level.trim().isEmpty() &&
+                        !level.equalsIgnoreCase("ALL")) {
 
                     builder.add(
                             new TermQuery(
