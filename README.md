@@ -1,343 +1,207 @@
-# LogStream – Distributed Log Analytics
+# LogStream ⚡
 
-LogStream is a distributed log analytics platform designed to **collect, search, analyze, and monitor application logs** from multiple services through a centralized dashboard.
+### Distributed Log Analytics & Alerting Platform
 
-The project provides a user-friendly interface for developers and system teams to understand application activity, identify errors, search logs, and configure alert conditions.
+LogStream is a full-stack observability platform for **log ingestion, indexing, search, analytics, alerting, and real-time monitoring**.
+
+**Tech Stack:** Java • Spring Boot • gRPC • Apache Lucene • React • ECharts • WebSockets
 
 ---
 
 ## 🚀 Features
 
-### 📊 Dashboard
-
-* Centralized overview of application logs
-* Log statistics and monitoring information
-* Analytics section for understanding log distribution
-* Visual representation of log data
-
-### 🔍 Log Search
-
-* Search application logs from a centralized interface
-* Filter logs by:
-
-  * Log level
-  * Service
-  * Search query
-* Display matching logs in a structured table
-
-### 📈 Log Analytics
-
-* Analyze logs by log level
-* Analyze logs by service
-* View log volume over time
-* Interactive charts using ECharts
-
-### 🚨 Alert Management
-
-* Create alert configurations
-* Configure:
-
-  * Alert name
-  * Service
-  * Log level
-  * Condition
-  * Threshold
-  * Severity
-* View existing alerts
-* Delete alerts
-* Backend scheduler evaluates configured alert conditions
+- 📥 **gRPC Log Ingestion** — Receive and validate logs through gRPC.
+- 🔎 **Log Search** — Search and filter indexed logs using Apache Lucene.
+- 📊 **Analytics Dashboard** — Visualize logs by level, service, and time.
+- 🚨 **Alerting Engine** — Create rules and evaluate them using scheduled tasks.
+- ⚡ **Live Tail** — Stream newly ingested logs in real time using WebSockets.
+- 🎨 **React UI** — Dashboard, Search Logs, Alerts, and Live Tail interfaces.
 
 ---
 
-## 🏗️ System Architecture
+## 🏗️ Architecture
 
 ```text
-                    ┌──────────────────────┐
-                    │       User           │
-                    │      Browser         │
-                    └──────────┬───────────┘
-                               │
-                               │ HTTP Requests
-                               ▼
-                    ┌──────────────────────┐
-                    │   React Frontend     │
-                    │      Vite            │
-                    │                      │
-                    │ Dashboard            │
-                    │ Search Logs          │
-                    │ Analytics            │
-                    │ Alerts               │
-                    └──────────┬───────────┘
-                               │
-                               │ REST API
-                               ▼
-                    ┌──────────────────────┐
-                    │   Spring Boot       │
-                    │      Backend         │
-                    │                      │
-                    │ Controllers          │
-                    │ Services             │
-                    │ Alert Engine         │
-                    └──────────┬───────────┘
-                               │
-                               ▼
-                    ┌──────────────────────┐
-                    │    Apache Lucene     │
-                    │  Log Indexing/Search  │
-                    └──────────────────────┘
+Log Producer
+     │
+     │ gRPC
+     ▼
+Spring Boot Backend
+     │
+     ├── Log Ingestion
+     │       │
+     │       ▼
+     │   Apache Lucene
+     │
+     ├── Search
+     ├── Analytics
+     └── Alert Engine
+             │
+             ▼
+        React Frontend
+             │
+      ┌──────┼────────┐
+      ▼      ▼        ▼
+  Dashboard Search   Alerts
+
+Log Ingestion
+      │
+      │ WebSocket
+      ▼
+  Live Tail
 ```
 
 ---
-
-## 🛠️ Tech Stack
+ ## 🛠️ Tech Stack
+### Backend
+- Java
+- Spring Boot
+- Apache Lucene
+- gRPC
+- WebSocket
+- Maven
 
 ### Frontend
-
-* React
-* Vite
-* JavaScript
-* ECharts
-* ECharts for React
-* CSS
-
-### Backend
-
-* Java
-* Spring Boot
-* Apache Lucene
-* REST APIs
-* gRPC
-
-### Development Tools
-
-* Git
-* GitHub
-* Maven
-* npm
+- React
+- Vite
+- ECharts
+- Lucide React
+- CSS
 
 ---
-
 ## 📁 Project Structure
-
 ```text
 logstream-distributed-log-analytics/
+│
+├── backend/
+│   ├── src/
+│   └── pom.xml
 │
 ├── frontend/
 │   ├── src/
 │   │   ├── components/
 │   │   ├── pages/
 │   │   ├── services/
-│   │   └── App.jsx
-│   │
+│   │   ├── App.jsx
+│   │   └── App.css
 │   ├── package.json
 │   └── vite.config.js
-│
-├── backend/
-│   ├── src/
-│   │   └── main/
-│   │       └── java/
-│   │           └── com/
-│   │               └── logstream/
-│   │
-│   └── pom.xml
 │
 └── README.md
 ```
 
 ---
+## 👩‍💻 My Contribution
 
-## ⚙️ Getting Started
+My primary contribution was the frontend development and frontend-backend integration.
 
-### Prerequisites
+I worked on:
 
-Make sure the following are installed:
+- Dashboard UI and analytics charts
+- Search Logs interface
+- Alerts interface
+- Live Tail interface
+- ECharts integration
+- Analytics API integration
+- WebSocket Live Tail integration
+- Service and log-level filtering
+- Pause / Resume functionality
+- UI styling, loading states, and final cleanup
 
-* Node.js
-* npm
-* Java
-* Maven
-* Git
+## 🔍 Where to Find My Work
+Main frontend directory:
 
----
-
-## 🔧 Backend Setup
-
-Navigate to the backend:
-
-```bash
-cd backend
+```text
+frontend/src/
 ```
 
-Run the Spring Boot application:
+Important files:
+```text
 
-```bash
+frontend/src/components/dashboard/LogAnalytics.jsx
+frontend/src/components/layout/Sidebar.jsx
+frontend/src/pages/Alerts.jsx
+frontend/src/pages/LiveTail.jsx
+frontend/src/pages/LiveTail.css
+frontend/src/services/analyticsService.js
+frontend/src/App.jsx
+frontend/src/App.css
+```
+
+You can also view my final frontend work on the:
+
+```text frontend-ui-refinement ``` branch.
+
+---
+## ▶️ Run Locally
+# Backend
+```text
+cd backend
 ./mvnw spring-boot:run
 ```
-
-The backend will start on the configured Spring Boot port.
-
----
-
-## 💻 Frontend Setup
-
-Open another terminal and navigate to the frontend:
-
-```bash
+# Backend:
+```
+HTTP → http://localhost:8080
+gRPC → localhost:9090
+```
+# Frontend
+Open another terminal:
+```text
 cd frontend
-```
-
-Install dependencies:
-
-```bash
 npm install
-```
-
-Start the development server:
-
-```bash
 npm run dev
 ```
 
-The frontend will normally be available at:
-
+Then open the Vite URL shown in the terminal, usually:
 ```text
 http://localhost:5173
 ```
-
----
-
-## 🔗 API Overview
-
-The application exposes APIs for different parts of the platform.
-
-### Analytics
-
+----
+## 📡 Main APIs
 ```text
-GET /api/analytics/levels
-GET /api/analytics/services
-GET /api/analytics/volume
-```
+GET    /api/analytics/levels
+GET    /api/analytics/services
+GET    /api/analytics/volume?minutes=30
 
-### Alerts
-
-The alert APIs support operations such as:
-
-```text
 GET    /api/alerts
 POST   /api/alerts
+PUT    /api/alerts/{id}
 DELETE /api/alerts/{id}
-```
 
-### Search
-
-The search API allows the frontend to request logs based on search criteria and filters.
-
----
-
-## 🔄 Application Flow
-
-The basic workflow of LogStream is:
-
-```text
-Log Data
-   ↓
-Backend Processing
-   ↓
-Lucene Indexing
-   ↓
-Search / Analytics / Alert Evaluation
-   ↓
-REST APIs
-   ↓
-React Frontend
-   ↓
-Dashboard / Search / Analytics / Alerts
+WebSocket:
+ws://localhost:8080/ws/livetail
 ```
 
 ---
+## 🧪 Verified
+ - gRPC log ingestion
+ - Lucene indexing & search
+ - Analytics dashboard
+ - Time-based log aggregation
+ - Alert creation & evaluation
+ - Alert triggering
+ - Simulated webhook
+ - WebSocket Live Tail
+ - Service & level filtering
+ - Frontend linting
+ - Backend compilation
 
-## 📊 Analytics
-
-LogStream uses **ECharts** to visualize analytics information received from the backend.
-
-Currently, analytics includes:
-
-* Logs by Level
-* Logs by Service
-* Log Volume over Time
-
-The frontend requests analytics data through REST APIs and converts the response into interactive visualizations.
-
----
-
-## 🚨 Alert System
-
-The alert system allows users to define conditions for monitoring logs.
-
-For example:
-
-```text
-Service: billing-api
-Level: ERROR
-Condition: Greater Than
-Threshold: 10
-Severity: HIGH
-```
-
-The backend scheduler periodically evaluates configured alert rules against the indexed logs.
-
----
-
-## 🧪 Testing & Verification
-
-The project has been verified through:
-
-### Backend
-
-```bash
-./mvnw clean compile
-```
-
-### Frontend
-
-```bash
-npm run lint
-```
-
-```bash
-npm run build
-```
-
-The frontend production build and backend compilation complete successfully.
-
----
-
-## 🔮 Future Improvements
-
-Possible future improvements include:
-
-* Real-time log streaming
-* Persistent alert history
-* More advanced analytics
-* Additional visualization types
-* Notification integrations
-* Improved alert event management
-* Production deployment and monitoring
-
----
-
-## 👥 Team
-
-**LogStream – Distributed Log Analytics**
-
-A collaborative project involving frontend development, backend development, and system integration.
-
----
-
+ ---
 ## 📌 Project Status
 
-**Current Status: Functional MVP**
+Completed — Academic Project
 
-The core platform currently supports centralized log search, dashboard monitoring, analytics, and alert configuration with frontend-backend integration.
+LogStream demonstrates a complete flow from:
+```text
+Log Ingestion → Lucene → Search / Analytics / Alerts → React Dashboard
+                                      │
+                                      └── WebSocket → Live Tail
+```
+----
+🔗 Repository
+```text
+https://github.com/Nikkiraj4/logstream-distributed-log-analytics
+```
 
-Further improvements and advanced features can be added as development continues.
+
+
